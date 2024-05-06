@@ -8,7 +8,7 @@ RUN apt-get update \
         zsh \
         wget \
         dnsutils \
-    && rm -rf /var/lib/apt/lists/*  \
+    && rm -rf /var/lib/apt/lists/*
 
 # Add extension manager https://github.com/mlocati/docker-php-extension-installer and install php extensions needed by our projects
 ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
