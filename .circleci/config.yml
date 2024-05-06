@@ -7,6 +7,7 @@ workflows:
       - docker/publish:
           image: favish/php-7.4-fpm-drupal-8
           update-description: true
+          use-buildkit: true
           tag: $CIRCLE_TAG
           filters:
             tags:
