@@ -1,82 +1,59 @@
-FROM php:7.4.28-fpm-bullseye
+FROM php:7.4.33-fpm-bookworm
 
 # Install general debian packages and php extensions
 RUN apt-get update \
     && apt-get install -y \
-        libzip-dev \
-        libpng-dev \
-        libjpeg-dev \
-        libonig-dev \
-        libpq-dev \
-        mariadb-client \
-        pkg-config \
-    && rm -rf /var/lib/apt/lists/* \
-    && docker-php-ext-configure gd --with-jpeg \
-    && docker-php-ext-install \
-        gd \
-        mbstring \
-        mysqli \
-        opcache \
-        pdo \
-        pdo_mysql \
-        pdo_pgsql \
-        zip
+        vim \
+        curl \
+        zsh \
+        wget \
+        dnsutils \
+    && rm -rf /var/lib/apt/lists/*  \
 
-# Install imagick
-# https://github.com/docker-library/php/issues/105
-RUN export CFLAGS="$PHP_CFLAGS" CPPFLAGS="$PHP_CPPFLAGS" LDFLAGS="$PHP_LDFLAGS" \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-        libmagickwand-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && pecl install --onlyreqdeps --force \
-        imagick-3.4.3 \
-    && rm -rf /tmp/pear \
-    && docker-php-ext-enable imagick
-
-# Install php mongo client
-RUN export CFLAGS="$PHP_CFLAGS" CPPFLAGS="$PHP_CPPFLAGS" LDFLAGS="$PHP_LDFLAGS"\
-    && apt-get update \
-    && apt-get install -y \
-        autoconf \
-        pkg-config \
-        libssl-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && pecl install --onlyreqdeps --force \
-        mongodb \
-    && rm -rf /tmp/pear \
-    && docker-php-ext-enable mongodb
-
-# Install php redis client
-RUN pecl install --onlyreqdeps --force \
-        redis \
-    && rm -rf /tmp/pear \
-    && docker-php-ext-enable redis
-
-# Add support for protobuf/grpc.
-# Primarily for Google Analytics 4 data api usage.
-RUN pecl install \
+# Add extension manager https://github.com/mlocati/docker-php-extension-installer and install php extensions needed by our projects
+ADD --chmod=0755 https://github.com/mlocati/docker-php-extension-installer/releases/latest/download/install-php-extensions /usr/local/bin/
+RUN install-php-extensions \
+    xdebug \
+    gd \
+    mbstring \
+    mysqli \
+    opcache \
+    pdo \
+    pdo_mysql \
+    pdo_pgsql \
+    zip \
+    imagick \
+    redis \
+    bcmath \
+    mongodb \
+    blackfire \
     grpc \
-    protobuf \
-    && docker-php-ext-enable grpc.so \
-      protobuf.so \
-    && docker-php-ext-install bcmath
+    protobuf
 
-# Enable blackfire
-# Important adjustment from blackfire docs is that our agent is available on localhost right now
-# If you move blackfire to a tools pod or something, update the blackfire.agent_socket below to a service exposing 8707 on that pod
-#RUN version=$(php -r "echo PHP_MAJOR_VERSION.PHP_MINOR_VERSION;") \
-#    && curl -A "Docker" -o /tmp/blackfire-probe.tar.gz -D - -L -s https://blackfire.io/api/v1/releases/probe/php/linux/amd64/$version \
-#    && tar zxpf /tmp/blackfire-probe.tar.gz -C /tmp \
-#    && mv /tmp/blackfire-*.so $(php -r "echo ini_get('extension_dir');")/blackfire.so \
-#    && printf "extension=blackfire.so\nblackfire.agent_socket=tcp://127.0.0.1:8707\n" > $PHP_INI_DIR/conf.d/blackfire.ini
+# Install and configure OhMyZSH
+RUN wget https://github.com/robbyrussell/oh-my-zsh/raw/master/tools/install.sh -O - | zsh || true \
+    && sed -i -e "s/bin\/bash/bin\/zsh/" /etc/passwd \
+    && echo "echo \"===========================================================\"" >> ~/.bashrc \
+    && echo "echo \"This container has zsh installed, use that instead of bash!\"" >> ~/.bashrc \
+    && echo "echo \"===========================================================\"" >> ~/.bashrc
+
+# Add a simple vimrc for highlighting and numbers
+RUN echo "set number\nsyntax on" > ~/.vimrc
 
 # Add composer vendor binaries to path, primarily for Drush
-ENV PATH="/var/www/vendor/bin:${PATH}"
+ENV PATH="/var/www/vendor/bin:${PATH}" \
+    SHELL="/bin/zsh" \
+    TERM="xterm" \
+    LANG="en_US.UTF-8" \
+    LANGUAGE="en_US.UTF-8" \
+    LC_ALL="en_US.UTF-8"
 
 # Use the provided default configuration for a production environment.
 # We will override anything needed for dev with overlayed configuration.
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+
+# Add xdebug configuration to prevent always on behavior and preserve performance with 'trigger mode'
+COPY zz-xdebug.ini /usr/local/etc/php/conf.d/zz-xdebug.ini
 
 RUN mkdir -p /var/www/docroot
 
