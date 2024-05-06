@@ -31,6 +31,6 @@ tag with that repo was `php-7.4-fpm_drupal-8_1.1.0`. The CircleCI build process 
 on [Dockerhub](https://hub.docker.com/r/favish/php-7.4-fpm-drupal-8). The first tag published with this repo is `2.0.0`.
 
 ### Release Notes
-v2.2.0 - Update to debian bookworm, simplify php extensions and remove need for standalone xdebug image
+v2.2.0 - Simplify php extensions and remove need for standalone xdebug image
 v2.1.0 - Updated docker image to use bullseye in order to update image certificates
 

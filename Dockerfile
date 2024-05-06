@@ -1,4 +1,4 @@
-FROM php:7.4.33-fpm-bookworm
+FROM php:7.4.33-fpm-bullseye
 
 # Install general debian packages and php extensions
 RUN apt-get update \
